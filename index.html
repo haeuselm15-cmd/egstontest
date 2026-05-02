@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Egston Quote Assistant</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{--green:#8DB14A;--green-dark:#6a8a32;--green-light:#f2f7e8;--black:#0f0f0f;--bg:#f7f7f4;--white:#fff;--border:#e0e0dc}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Syne',sans-serif;background:var(--bg);color:var(--black);height:100vh;display:flex;flex-direction:column}
+  .header{background:var(--black);padding:14px 24px;display:flex;align-items:center;gap:14px;flex-shrink:0}
+  .logo{background:var(--green);color:var(--black);font-size:10px;font-weight:800;letter-spacing:.12em;padding:6px 10px;line-height:1.3;text-transform:uppercase}
+  .header-title{color:#fff;font-size:16px;font-weight:700}
+  .header-sub{color:#888;font-family:'DM Mono',monospace;font-size:11px;margin-top:1px}
+  .header-status{margin-left:auto;font-family:'DM Mono',monospace;font-size:11px;color:var(--green);display:flex;align-items:center;gap:6px}
+  .dot{width:7px;height:7px;background:var(--green);border-radius:50%;animation:pulse 2s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+  .chat-area{flex:1;overflow-y:auto;padding:24px;display:flex;flex-direction:column;gap:16px}
+  .message{display:flex;gap:12px;animation:fadeIn .3s ease;max-width:780px;width:100%;margin:0 auto}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+  .message.user{justify-content:flex-end}
+  .avatar{width:32px;height:32px;min-width:32px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex-shrink:0;margin-top:4px}
+  .avatar.bot{background:var(--black);color:var(--green)}
+  .avatar.user-av{background:var(--green);color:var(--black);order:2}
+  .bubble{padding:14px 18px;max-width:calc(100% - 100px);font-size:14px;line-height:1.65}
+  .bubble.bot{background:var(--white);border:1.5px solid var(--border);border-radius:0 12px 12px 12px}
+  .bubble.user{background:var(--black);color:#fff;border-radius:12px 0 12px 12px;font-family:'DM Mono',monospace;font-size:13px}
+  .bubble p{margin-bottom:8px}.bubble p:last-child{margin-bottom:0}
+  .bubble strong{color:var(--green);font-weight:700}
+  .quick-replies{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+  .qr-btn{font-family:'Syne',sans-serif;font-size:12px;font-weight:600;padding:7px 14px;border:1.5px solid var(--green);background:var(--white);color:var(--green-dark);cursor:pointer;transition:all .15s}
+  .qr-btn:hover{background:var(--green);color:#fff}
+  .typing{display:flex;gap:5px;align-items:center;padding:14px 18px;background:var(--white);border:1.5px solid var(--border);border-radius:0 12px 12px 12px;width:fit-content}
+  .typing span{width:7px;height:7px;background:var(--green);border-radius:50%;animation:bounce 1.2s infinite}
+  .typing span:nth-child(2){animation-delay:.2s}.typing span:nth-child(3){animation-delay:.4s}
+  @keyframes bounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-6px)}}
+  .input-area{border-top:1.5px solid var(--border);background:var(--white);padding:16px 24px;flex-shrink:0}
+  .input-row{display:flex;gap:10px;max-width:780px;margin:0 auto;align-items:flex-end}
+  textarea#userInput{flex:1;font-family:'DM Mono',monospace;font-size:14px;padding:12px 16px;border:1.5px solid var(--border);background:var(--bg);color:var(--black);resize:none;outline:none;min-height:48px;max-height:120px;line-height:1.5;transition:border-color .15s}
+  textarea#userInput:focus{border-color:var(--green);background:var(--white)}
+  #sendBtn{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;padding:12px 22px;background:var(--black);color:#fff;border:none;cursor:pointer;transition:background .15s;height:48px;white-space:nowrap}
+  #sendBtn:hover{background:var(--green)}
+  #sendBtn:disabled{background:#ccc;cursor:not-allowed}
+  .input-hint{font-family:'DM Mono',monospace;font-size:11px;color:#aaa;margin-top:6px;text-align:center}
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="logo">EGSTON<br>POWER</div>
+  <div><div class="header-title">Quote Assistant</div><div class="header-sub">Automated Quotation System</div></div>
+  <div class="header-status"><div class="dot"></div>Online</div>
+</div>
+<div class="chat-area" id="chatArea"></div>
+<div class="input-area">
+  <div class="input-row">
+    <textarea id="userInput" placeholder="Type your answer..." rows="1"></textarea>
+    <button id="sendBtn" onclick="sendMessage()">Send →</button>
+  </div>
+  <div class="input-hint">Press Enter to send · Shift+Enter for new line</div>
+</div>
+<script>
+const WEBHOOK_URL='https://hook.eu1.make.com/92jrae1wh2daet1vo1a9kcj5na5u7tx1';
+let history=[];
+const chatArea=document.getElementById('chatArea');
+const userInput=document.getElementById('userInput');
+const sendBtn=document.getElementById('sendBtn');
+
+userInput.addEventListener('input',()=>{userInput.style.height='auto';userInput.style.height=Math.min(userInput.scrollHeight,120)+'px';});
+userInput.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();}});
+
+function getToday(){const d=new Date();return`${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}`;}
+
+function addMessage(role,content,qr=[]){
+  const div=document.createElement('div');div.className=`message ${role==='user'?'user':'bot'}`;
+  if(role!=='user'){const av=document.createElement('div');av.className='avatar bot';av.textContent='E';div.appendChild(av);}
+  const bubble=document.createElement('div');bubble.className=`bubble ${role==='user'?'user':'bot'}`;
+  const fmt=content.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\n\n/g,'</p><p>').replace(/\n/g,'<br>');
+  bubble.innerHTML=`<p>${fmt}</p>`;
+  if(qr.length>0){
+    const qrDiv=document.createElement('div');qrDiv.className='quick-replies';
+    qr.forEach(q=>{const btn=document.createElement('button');btn.className='qr-btn';btn.textContent=q;btn.onclick=()=>{userInput.value=q;sendMessage();};qrDiv.appendChild(btn);});
+    bubble.appendChild(qrDiv);
+  }
+  div.appendChild(bubble);
+  if(role==='user'){const av=document.createElement('div');av.className='avatar user-av';av.textContent='M';div.appendChild(av);}
+  chatArea.appendChild(div);
+  setTimeout(()=>chatArea.scrollTop=chatArea.scrollHeight,100);
+}
+
+function showTyping(){
+  const div=document.createElement('div');div.className='message bot';div.id='typing';
+  const av=document.createElement('div');av.className='avatar bot';av.textContent='E';
+  const t=document.createElement('div');t.className='typing';t.innerHTML='<span></span><span></span><span></span>';
+  div.appendChild(av);div.appendChild(t);chatArea.appendChild(div);
+  setTimeout(()=>chatArea.scrollTop=chatArea.scrollHeight,100);
+}
+function removeTyping(){const t=document.getElementById('typing');if(t)t.remove();}
+
+function detectQR(msg){
+  const l=msg.toLowerCase();
+  if(l.includes('config-a')||l.includes('config-b')||l.includes('custom'))return['CONFIG-A','CONFIG-B','Custom Konfiguration'];
+  if(l.includes('austria')||l.includes('österreich')||l.includes('land:'))return['Austria','Germany','Switzerland'];
+  if(l.includes('fca')||l.includes('incoterm'))return['FCA St. Pölten (Standard)','EXW','DAP'];
+  if(l.includes('bestätig')||l.includes('confirm')||l.includes('generier'))return['Ja, Angebot erstellen!','Nein, noch ändern'];
+  if(l.includes('option')||l.includes('add-on'))return['Keine Optionen','Advanced Data Logging','On-site Installation','Customer Training'];
+  return[];
+}
+
+async function callAPI(messages){
+  const res=await fetch('/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages,today:getToday()})});
+  const data=await res.json();
+  if(data.error)throw new Error(data.error);
+  return data.text;
+}
+
+async function sendMessage(){
+  const text=userInput.value.trim();
+  if(!text||sendBtn.disabled)return;
+  addMessage('user',text);
+  userInput.value='';userInput.style.height='auto';
+  sendBtn.disabled=true;
+  history.push({role:'user',content:text});
+  showTyping();
+  try{
+    const msg=await callAPI(history);
+    history.push({role:'assistant',content:msg});
+    removeTyping();
+    const match=msg.match(/TRIGGER_WEBHOOK:({.*})/);
+    if(match){
+      const payload=JSON.parse(match[1]);
+      const display=msg.replace(/TRIGGER_WEBHOOK:.*/,'').trim();
+      if(display)addMessage('assistant',display);
+      await triggerWebhook(payload);
+    }else{addMessage('assistant',msg,detectQR(msg));}
+  }catch(err){removeTyping();addMessage('assistant',`Fehler: ${err.message}`);}
+  sendBtn.disabled=false;userInput.focus();
+}
+
+async function triggerWebhook(payload){
+  addMessage('assistant','⏳ Sende Daten an Make.com...');
+  try{
+    const res=await fetch(WEBHOOK_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    if(res.ok){addMessage('assistant',`✅ **Angebot wird generiert!**\n\nDas PDF erscheint in ~30 Sekunden in OneDrive.\n\n**Kunde:** ${payload.customer_name}\n**Konfiguration:** ${payload.configuration}\n**Quote-Nr.:** ${payload.quote_number}`,['Neues Angebot erstellen']);}
+    else throw new Error('HTTP '+res.status);
+  }catch(err){addMessage('assistant',`❌ Fehler: ${err.message}`);}
+}
+
+async function init(){
+  showTyping();sendBtn.disabled=true;
+  try{
+    const msg=await callAPI([{role:'user',content:'Hallo'}]);
+    history.push({role:'user',content:'Hallo'});history.push({role:'assistant',content:msg});
+    removeTyping();addMessage('assistant',msg,['CONFIG-A','CONFIG-B','Custom']);
+  }catch(err){removeTyping();addMessage('assistant','Hallo! Für welchen Kunden möchtest du heute ein Angebot erstellen?');}
+  sendBtn.disabled=false;userInput.focus();
+}
+init();
+</script>
+</body>
+</html>
