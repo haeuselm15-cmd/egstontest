@@ -65,12 +65,9 @@ let history=[];
 const chatArea=document.getElementById('chatArea');
 const userInput=document.getElementById('userInput');
 const sendBtn=document.getElementById('sendBtn');
-
 userInput.addEventListener('input',()=>{userInput.style.height='auto';userInput.style.height=Math.min(userInput.scrollHeight,120)+'px';});
 userInput.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();}});
-
 function getToday(){const d=new Date();return`${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}`;}
-
 function addMessage(role,content,qr=[]){
   const div=document.createElement('div');div.className=`message ${role==='user'?'user':'bot'}`;
   if(role!=='user'){const av=document.createElement('div');av.className='avatar bot';av.textContent='E';div.appendChild(av);}
@@ -87,7 +84,6 @@ function addMessage(role,content,qr=[]){
   chatArea.appendChild(div);
   setTimeout(()=>chatArea.scrollTop=chatArea.scrollHeight,100);
 }
-
 function showTyping(){
   const div=document.createElement('div');div.className='message bot';div.id='typing';
   const av=document.createElement('div');av.className='avatar bot';av.textContent='E';
@@ -96,7 +92,6 @@ function showTyping(){
   setTimeout(()=>chatArea.scrollTop=chatArea.scrollHeight,100);
 }
 function removeTyping(){const t=document.getElementById('typing');if(t)t.remove();}
-
 function detectQR(msg){
   const l=msg.toLowerCase();
   if(l.includes('config-a')||l.includes('config-b')||l.includes('custom'))return['CONFIG-A','CONFIG-B','Custom Konfiguration'];
@@ -106,14 +101,12 @@ function detectQR(msg){
   if(l.includes('option')||l.includes('add-on'))return['Keine Optionen','Advanced Data Logging','On-site Installation','Customer Training'];
   return[];
 }
-
 async function callAPI(messages){
-  const res=await fetch('/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages,today:getToday()})});
+  const res=await fetch('/.netlify/functions/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages,today:getToday()})});
   const data=await res.json();
   if(data.error)throw new Error(data.error);
   return data.text;
 }
-
 async function sendMessage(){
   const text=userInput.value.trim();
   if(!text||sendBtn.disabled)return;
@@ -136,7 +129,6 @@ async function sendMessage(){
   }catch(err){removeTyping();addMessage('assistant',`Fehler: ${err.message}`);}
   sendBtn.disabled=false;userInput.focus();
 }
-
 async function triggerWebhook(payload){
   addMessage('assistant','⏳ Sende Daten an Make.com...');
   try{
@@ -145,7 +137,6 @@ async function triggerWebhook(payload){
     else throw new Error('HTTP '+res.status);
   }catch(err){addMessage('assistant',`❌ Fehler: ${err.message}`);}
 }
-
 async function init(){
   showTyping();sendBtn.disabled=true;
   try{
