@@ -25,7 +25,7 @@ exports.handler = async (event) => {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': process.env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 1000, system: SYSTEM_PROMPT + `\n\nToday: ${today}`, messages })
+      body: JSON.stringify({ model: 'claude-opus-4-5', max_tokens: 1000, system: SYSTEM_PROMPT + `\n\nToday: ${today}`, messages })
     });
     const data = await response.json();
     return { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: data.content[0].text }) };
